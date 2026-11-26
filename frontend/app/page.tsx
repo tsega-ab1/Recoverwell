@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import {
-  Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BrainCircuit, CalendarDays,
+  Activity, ArrowRight, ArrowUpRight, BrainCircuit, CalendarDays,
   Check, ChevronDown, CircleHelp, Clock3, CloudSun, HeartPulse, Leaf, Menu,
-  MessageCircle, Moon, Play, RefreshCw, ShieldCheck, Sparkles, Sprout, Target,
+  MessageCircle, Moon, RefreshCw, ShieldCheck, Sparkles, Sprout, Target,
   Waves, Wind, X
 } from "lucide-react";
 
@@ -31,7 +31,7 @@ const activities: Record<string, { name: string; detail: string; icon: typeof Wi
   nature: { name: "A moment outdoors", detail: "A change of scene and a little fresh air.", icon: Leaf },
   creative: { name: "Creative reset", detail: "Make something without an outcome in mind.", icon: Sparkles },
 };
-function demoRecommendation(f: FormState): Recommendation {
+const navigationItems: { id: string; label: string; icon: typeof Activity }[] = [\n  { id: "overview", label: "Overview", icon: Activity },\n  { id: "checkin", label: "Daily check-in", icon: HeartPulse },\n  { id: "intelligence", label: "Intelligence lab", icon: BrainCircuit },\n  { id: "insights", label: "Insights", icon: Target },\n];\n\nfunction demoRecommendation(f: FormState): Recommendation {
   const category = f.stress >= 4 ? "breathing" : f.energy <= 2 ? "mindfulness" : f.meetings_today >= 5 ? "movement" : "nature";
   const duration = Math.min(f.free_minutes, category === "nature" ? 10 : 5);
   return {
@@ -111,7 +111,7 @@ export default function Home() {
       <div className="brand"><div className="brand-mark"><Sprout size={22}/></div><span>recoverwell<span className="brand-dot">.</span></span><button className="mobile-close" onClick={() => setMobileMenu(false)} aria-label="Close menu"><X size={18}/></button></div>
       <div className="workspace-label">WORKSPACE</div>
       <nav className="nav-list">
-        {[["overview","Overview",Activity],["checkin","Daily check-in",HeartPulse],["intelligence","Intelligence lab",BrainCircuit],["insights","Insights",Target]].map(([id,label,Icon]: any) =>
+        {navigationItems.map(({ id, label, icon: Icon }) =>
           <button key={id} className={`nav-item ${active === id ? "active" : ""}`} onClick={() => { setActive(id); setMobileMenu(false); document.getElementById(id === "overview" ? "overview" : id)?.scrollIntoView({ behavior: "smooth" }); }}><Icon size={18}/><span>{label}</span>{id === "checkin" && <span className="nav-indicator"/>}</button>
         )}
       </nav>
@@ -136,7 +136,7 @@ export default function Home() {
 
         <section className="hero-card">
           <div className="hero-orb orb-one"/><div className="hero-orb orb-two"/>
-          <div className="hero-copy"><span className="hero-kicker"><Sparkles size={14}/> YOUR DAILY MOMENT</span><h2>Wellbeing isn't<br/>one-size-fits-all.</h2><p>Recoverwell brings your check-in, schedule and preferences together to suggest a small, realistic reset.</p><button className="hero-button" onClick={() => document.getElementById("checkin")?.scrollIntoView({ behavior: "smooth" })}>Start your check-in <ArrowRight size={16}/></button></div>
+          <div className="hero-copy"><span className="hero-kicker"><Sparkles size={14}/> YOUR DAILY MOMENT</span><h2>Wellbeing isn&apos;t<br/>one-size-fits-all.</h2><p>Recoverwell brings your check-in, schedule and preferences together to suggest a small, realistic reset.</p><button className="hero-button" onClick={() => document.getElementById("checkin")?.scrollIntoView({ behavior: "smooth" })}>Start your check-in <ArrowRight size={16}/></button></div>
           <div className="hero-art" aria-hidden="true"><div className="sun-disc"/><div className="hill hill-back"/><div className="hill hill-front"/><div className="hero-plant"><span/><span/><span/></div><div className="floating-leaf"><Leaf size={24}/></div></div>
           <div className="hero-caption"><span>01 / 04</span><span>PAUSE · NOTICE · RESET</span></div>
         </section>
@@ -152,7 +152,7 @@ export default function Home() {
         <section className="recommendation-layout">
           <div className="recommend-card">
             {result ? <><div className="recommend-top"><span className="recommend-label"><Sparkles size={14}/> RECOMMENDED FOR THIS MOMENT</span><span className="match-pill">Suggested</span></div><div className="activity-main"><div className="activity-icon"><CurrentIcon size={25}/></div><div><h3>{current?.name ?? result.category}</h3><p>{current?.detail ?? "A small recovery activity, selected for your context."}</p></div></div><div className="duration-row"><span><Clock3 size={15}/> {result.duration_min} minutes</span><span><ShieldCheck size={15}/> Safety screened</span></div><div className="why-box"><strong>Why this suggestion?</strong>{result.reasons.map((reason,i)=><div className="reason" key={i}><Check size={14}/>{reason}</div>)}</div>{result.support_message && <div className="support-box">{result.support_message}</div>}<div className="feedback-row"><span>Did you try it?</span><button className={feedback === "completed" ? "feedback-selected" : ""} onClick={() => sendFeedback("completed")}><Check size={15}/> Completed</button><button className={feedback === "skipped" ? "feedback-selected" : ""} onClick={() => sendFeedback("skipped")}>Not now</button></div></> :
-              <div className="empty-recommend"><div className="empty-icon"><Sparkles size={24}/></div><span className="recommend-label">YOUR PERSONALIZED RESET</span><h3>Your next reset starts<br/>with a check-in.</h3><p>Share a little about how you're feeling. We'll use your context to find a recovery activity that fits.</p><button className="primary-button" onClick={() => document.getElementById("checkin")?.scrollIntoView({ behavior: "smooth" })}>Complete daily check-in <ArrowRight size={16}/></button></div>}
+              <div className="empty-recommend"><div className="empty-icon"><Sparkles size={24}/></div><span className="recommend-label">YOUR PERSONALIZED RESET</span><h3>Your next reset starts<br/>with a check-in.</h3><p>Share a little about how you&apos;re feeling. We&apos;ll use your context to find a recovery activity that fits.</p><button className="primary-button" onClick={() => document.getElementById("checkin")?.scrollIntoView({ behavior: "smooth" })}>Complete daily check-in <ArrowRight size={16}/></button></div>}
           </div>
           <div className="side-insight"><div className="insight-head"><div className="insight-icon"><CloudSun size={19}/></div><span>THE IDEA</span></div><h3>Small moments<br/>add up.</h3><p>Recovery works best when it fits real life — your energy, your calendar and what feels right today.</p><div className="insight-divider"/><div className="insight-stat"><span>MODEL APPROACH</span><strong>Rules first, learning next</strong><small>Explainable by design</small></div><div className="insight-stat"><span>SAFETY PRINCIPLE</span><strong>Constraints before ranking</strong><small>Never optimized away</small></div></div>
         </section>
