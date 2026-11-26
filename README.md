@@ -1,62 +1,141 @@
-# recoverwell
+# Recoverwell
 
-Contextual recommendation of short recovery activities (breathing, movement, mindfulness, social, nature, creative) from daily check-ins, calendar load, wearable signals and stated preferences.
+**Context-aware recovery activity recommendations, built to be explainable first and adaptive over time.**
 
-Design follows one principle: **start with explainable rules, then let feedback correct them.** v0 is general and runnable end to end; see Roadmap for what gets refined next.
+Recoverwell explores how daily check-ins, schedule context, wearable signals and personal preferences can help recommend small recovery activities at appropriate moments.
+
+> Research prototype. It is not a medical device, does not diagnose or treat conditions, and its illustrative safety thresholds and synthetic evaluation results are not clinically validated.
+
+## Product
+
+The repository contains two connected parts:
+
+- **Python recommendation engine** — safety eligibility, explainable rule scoring, LinUCB contextual bandit, hybrid policy, synthetic simulation and FastAPI.
+- **Next.js web experience** — responsive wellbeing check-in, live recommendation and feedback flow, model strategy overview and illustrative analytics.
 
 ## Architecture
 
-```
-Context (check-in + calendar + wearables + prefs)
-   -> safety.eligible()     hard constraints: time window, intensity caps, outdoors; never learned
-   -> rules.score()         explainable baseline, every score carries reasons
-   -> LinUCB residual model learns (reward - rule_score) from completion feedback
-   -> ranked activity + reasons  (+ support message when mood very low and stress very high)
+```text
+Next.js web app (GitHub Pages)
+        |  check-in / feedback
+        v
+FastAPI service (Render or another Python host)
+        |
+        v
+Recoverwell recommendation engine
+  1. Safety eligibility filter (hard constraints)
+  2. Explainable rule-based baseline
+  3. LinUCB residual learner
+  4. Ranked activity + human-readable reasons
+        |
+        v
+Feedback updates the contextual policy
 ```
 
-| Module | Role |
-|---|---|
-| `schema.py`, `features.py` | context -> 17-dim feature vector (missing HRV handled explicitly) |
-| `safety.py` | eligibility filter + support-prompt trigger |
-| `rules.py` | cold-start baseline with explanations |
-| `bandit.py` | disjoint LinUCB, Sherman-Morrison updates |
-| `policies.py` | `random`, `rules`, `linucb`, `hybrid` behind one interface |
-| `simulator.py`, `evaluate.py` | synthetic world, regret vs oracle, learning curves |
-| `api.py` | FastAPI `/recommend` and `/feedback` |
+The safety filter is applied before ranking. The model cannot learn to bypass its eligibility constraints.
 
-## Run
+## Run locally
+
+### Python API
+
+From the repository root:
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-PYTHONPATH=src python -m pytest -q
+PYTHONPATH=src uvicorn recoverwell.api:app --reload
+```
+
+API docs: http://localhost:8000/docs
+
+### Web application
+
+In a second terminal:
+
+```bash
+cd frontend
+npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+```
+
+Open http://localhost:3000.
+
+If `NEXT_PUBLIC_API_URL` is not set, the web app runs in a clearly labelled local demo mode. Demo recommendations and feedback are not sent to or learned by the Python engine.
+
+### Tests and simulation
+
+```bash
+PYTHONPATH=src pytest -q
 PYTHONPATH=src python -m recoverwell.pipeline --rounds 20000 --out reports/metrics.json
-PYTHONPATH=src uvicorn recoverwell.api:app --reload      # or: docker build -t recoverwell . 
 ```
 
-## Results (synthetic world, 20k rounds, 50 users, seed 0)
+## Deployment
 
-```
-policy      completion  expected  oracle    regret
-random          0.4819    0.4866  0.6231    2730.6
-rules           0.5844    0.5869  0.6231     725.5
-linucb          0.5752    0.5762  0.6231     939.5
-hybrid          0.5857    0.5864  0.6231     735.9
-```
+### 1. Deploy the API
 
-`completion` = observed completion rate; `expected` = mean true completion probability of chosen activities; `oracle` = best eligible choice; `regret` = cumulative gap to oracle.
+The included `render.yaml` describes a Render web service. Create a new Blueprint deployment from this repository. The API uses the `ALLOWED_ORIGINS` environment variable for browser CORS access.
 
-**Read this honestly.** In this simulator the hand-written rules already encode most of the true structure (I wrote both), so they are a strong baseline. The pure bandit is still improving at 20k rounds, and the hybrid roughly matches the rules. Learning pays off when the rules are *wrong* or users diverge from the population, which this v0 simulator does not yet stress. Real logged data is the real test.
+The current v0 API keeps its policy state and pending feedback in process memory. It is suitable for a single-instance prototype, not durable production use. A restart loses learned state; multiple instances will not share it. Add persistent storage and user authentication before collecting real personal data.
 
-## Roadmap (refinement order)
+### 2. Deploy the frontend to GitHub Pages
 
-1. **Stress-test rule misspecification**: perturb the simulator so rules are miscalibrated; measure how fast the residual model recovers.
-2. **Better models**: Thompson sampling, per-user random effects / hierarchical shrinkage, nonlinear features, then gradient-boosted reward model with bandit-style exploration.
-3. **Off-policy evaluation**: log propensities; add IPS / doubly-robust estimators so new policies can be assessed on logged data before deployment.
-4. **Metrics**: relevance (completion), timing (acceptance by time-of-day), engagement (retention), wellbeing delta from next check-in; define guardrail metrics.
-5. **Pipeline / MLOps**: feature store, MLflow tracking, scheduled retraining (Airflow), model registry, drift monitoring, persistent model state.
-6. **Safety and science**: advisor-reviewed activity catalog and rules, escalation policy, consent and privacy for wearable data.
-7. **Companion integration**: expose ranked candidates + reasons to an LLM layer for natural-language explanation.
+1. Open repository **Settings → Pages**.
+2. Set **Build and deployment → Source** to **GitHub Actions**.
+3. In **Settings → Secrets and variables → Actions → Variables**, add:
+   - Name: `NEXT_PUBLIC_API_URL`
+   - Value: the deployed API origin, e.g. `https://your-service.onrender.com`
+4. Push changes to `main` or `feature/full-stack-platform`, or run the **Deploy Recoverwell web** workflow manually.
 
-## Limitations
+The static site is exported from `frontend/out` and served at:
 
-Synthetic data only; reward is completion, not validated wellbeing change; no persistence; the safety thresholds are illustrative, not clinically validated.
+`https://tsega-ab1.github.io/Recoverwell/`
+
+The frontend variable is public at build time. Never put API keys, credentials or private tokens in `NEXT_PUBLIC_*` variables.
+
+## Recommendation API
+
+### `POST /recommend`
+
+Accepts a request ID, user context and optional preferences. Returns the selected activity, duration, explanation reasons and an optional support prompt.
+
+### `POST /feedback`
+
+Accepts the recommendation request ID, activity ID and completion outcome. The v0 process-local hybrid policy uses the outcome to update its LinUCB residual model.
+
+### `GET /health`
+
+Returns API health and the current hybrid learning blend.
+
+## Current ML approach
+
+- **Random** — reference baseline.
+- **Rules** — explainable cold-start policy.
+- **LinUCB** — contextual bandit.
+- **Hybrid** — rules provide the prior; LinUCB learns a residual correction from feedback.
+
+The current simulator is synthetic. Its results measure behavior inside the simulator, not real-world wellbeing improvement. The next evaluation milestone is to stress-test misspecified rules and compare policies over multiple seeds with uncertainty intervals.
+
+## Roadmap
+
+- [x] Explainable rule-based recommendations and hard safety eligibility.
+- [x] LinUCB contextual bandit and hybrid policy.
+- [x] Synthetic simulation and policy comparison.
+- [x] FastAPI recommendation and feedback endpoints.
+- [x] Interactive Next.js check-in and recommendation experience.
+- [x] GitHub Pages deployment workflow and Render service blueprint.
+- [ ] Persistent feedback and model state (database-backed).
+- [ ] Reproducible multi-seed evaluation and confidence intervals.
+- [ ] Off-policy evaluation (IPS / doubly robust).
+- [ ] MLflow experiment tracking and model versioning.
+- [ ] Consent, data minimization, retention and access controls.
+- [ ] Scientific review of the activity catalogue, safety rules and outcome measures.
+
+## Responsible-use principles
+
+- Collect only the context needed for a recommendation.
+- Treat wearable and wellbeing signals as sensitive personal data.
+- Make recommendations explainable and easy to decline.
+- Keep safety constraints outside the learning objective.
+- Do not interpret activity completion as proof of improved health.
+- Validate any wellbeing outcome claims with appropriate scientific review.
