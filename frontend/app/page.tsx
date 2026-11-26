@@ -31,7 +31,14 @@ const activities: Record<string, { name: string; detail: string; icon: typeof Wi
   nature: { name: "A moment outdoors", detail: "A change of scene and a little fresh air.", icon: Leaf },
   creative: { name: "Creative reset", detail: "Make something without an outcome in mind.", icon: Sparkles },
 };
-const navigationItems: { id: string; label: string; icon: typeof Activity }[] = [\n  { id: "overview", label: "Overview", icon: Activity },\n  { id: "checkin", label: "Daily check-in", icon: HeartPulse },\n  { id: "intelligence", label: "Intelligence lab", icon: BrainCircuit },\n  { id: "insights", label: "Insights", icon: Target },\n];\n\nfunction demoRecommendation(f: FormState): Recommendation {
+const navigationItems: { id: string; label: string; icon: typeof Activity }[] = [
+  { id: "overview", label: "Overview", icon: Activity },
+  { id: "checkin", label: "Daily check-in", icon: HeartPulse },
+  { id: "intelligence", label: "Intelligence lab", icon: BrainCircuit },
+  { id: "insights", label: "Insights", icon: Target },
+];
+
+function demoRecommendation(f: FormState): Recommendation {
   const category = f.stress >= 4 ? "breathing" : f.energy <= 2 ? "mindfulness" : f.meetings_today >= 5 ? "movement" : "nature";
   const duration = Math.min(f.free_minutes, category === "nature" ? 10 : 5);
   return {
