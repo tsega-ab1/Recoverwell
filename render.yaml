@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: recoverwell-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn recoverwell.api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: PYTHONPATH
+        value: src
+      - key: ALLOWED_ORIGINS
+        value: https://tsega-ab1.github.io
