@@ -1,0 +1,12 @@
+[project]
+name = "recoverwell"
+version = "0.1.0"
+description = "Contextual recovery-activity recommender: explainable rules -> contextual bandit"
+requires-python = ">=3.10"
+dependencies = ["numpy", "pandas", "fastapi", "uvicorn", "pydantic"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

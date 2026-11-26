@@ -1,0 +1,5 @@
+policy      completion  expected  oracle    regret
+random          0.4819    0.4866  0.6231    2730.6
+rules           0.5844    0.5869  0.6231     725.5
+linucb          0.5752    0.5762  0.6231     939.5
+hybrid          0.5857    0.5864  0.6231     735.9
